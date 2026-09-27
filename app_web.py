@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import time
 import google.genai as genai
 import pandas as pd
 import streamlit as st
@@ -26,6 +27,23 @@ api_key = st.sidebar.text_input(
 )
 
 st.sidebar.markdown("### Data Source")
+
+# Instruções claras sobre o formato do CSV na barra lateral
+with st.sidebar.expander("📋 CSV Format Guidelines"):
+  st.markdown(
+      "To ensure proper processing, your CSV file must follow these"
+      " requirements:\n\n"
+      "1. **Delimiter:** Use semicolon (`;`) to separate columns.\n"
+      "2. **Required Columns:**\n"
+      "   - `Vendor Name` (Text)\n"
+      "   - `Category` (Text)\n"
+      "   - `Email` (Text)\n"
+      "   - `Renewal Date` (Format: `DD/MM/YYYY`)\n"
+      "   - `Notice Period Days` (Integer, e.g., `30`, `90`)\n\n"
+      "**Example row:**\n"
+      "`Salesforce Brasil;CRM;support@salesforce.com.br;15/10/2026;30`"
+  )
+
 uploaded_file = st.sidebar.file_uploader(
     "Upload your CSV file:", type=["csv", "txt"]
 )
@@ -36,7 +54,7 @@ if uploaded_file is not None:
     # Read CSV with semicolon delimiter and clean quotes/spaces
     df = pd.read_csv(uploaded_file, sep=";")
     df = df.apply(
-        lambda x: x.str.strip('"').str.strip() if x.dtype == "object" else x
+        lambda x: x.str.strip('"'].str.strip() if x.dtype == "object" else x
     )
 
     st.subheader("Loaded Contracts & Vendor Data")
@@ -88,6 +106,9 @@ if uploaded_file is not None:
             "Select Vendor for AI Audit:", vendor_names
         )
 
+        if "audit_cache" not in st.session_state:
+          st.session_state.audit_cache = {}
+
         if st.button("Run AI Contract & Market Audit"):
           if not api_key:
             st.warning(
@@ -95,40 +116,57 @@ if uploaded_file is not None:
                 " audit."
             )
           else:
-            with st.spinner(
-                f"Analyzing contract risks and market alternatives for"
-                f" {selected_vendor}..."
-            ):
-              try:
-                # Initialize Gemini client
-                client = genai.Client(api_key=api_key)
+            if selected_vendor in st.session_state.audit_cache:
+              st.success("Loaded from instant cache!")
+              st.markdown("### AI Audit Report")
+              st.write(st.session_state.audit_cache[selected_vendor])
+            else:
+              with st.spinner(
+                  f"Analyzing contract risks for {selected_vendor}..."
+              ):
+                success = False
+                response_text = ""
+                for attempt in range(3):
+                  try:
+                    client = genai.Client(api_key=api_key)
+                    prompt = (
+                        f"As an IT procurement expert, provide a concise risk"
+                        f" and market sourcing analysis for {selected_vendor}."
+                        f" Cover key contract traps, negotiation levers, and top"
+                        f" 2 market alternatives. Keep it professional and"
+                        f" structured in English."
+                    )
+                    response = client.models.generate_content(
+                        model="gemini-3.8-flash",
+                        contents=prompt,
+                        config={
+                            "max_output_tokens": 600,
+                            "temperature": 0.3,
+                        },
+                    )
+                    response_text = response.text
+                    success = True
+                    break
+                  except Exception:
+                    time.sleep(2)
 
-                prompt = (
-                    f"Act as an expert IT Procurement Director and Financial"
-                    f" Auditor. Provide a strategic risk and sourcing analysis"
-                    f" for the software/IT vendor: {selected_vendor}. Include"
-                    f" potential hidden traps in standard enterprise contracts"
-                    f" (like automatic roll-over clauses, price inflation"
-                    f" caps), negotiation levers for the upcoming renewal,"
-                    f" and top 2 market alternatives or open-source equivalents"
-                    f" to reduce costs. Keep it structured and professional"
-                    f" in English."
-                )
-
-                response = client.models.generate_content(
-                    model="gemini-3.8-flash", contents=prompt
-                )
-
-                st.markdown("### AI Audit Report")
-                st.write(response.text)
-
-              except Exception as ai_err:
-                st.error(f"Error generating AI audit: {ai_err}")
+                if success:
+                  st.session_state.audit_cache[selected_vendor] = response_text
+                  st.markdown("### AI Audit Report")
+                  st.write(response_text)
+                else:
+                  st.error(
+                      "The server is experiencing high demand right now. Please"
+                      " wait a few moments and try clicking the button again."
+                  )
 
   except Exception as e:
     st.error(f"Error processing file: {e}")
 else:
-  st.info("👉 Please upload your contract CSV file via the sidebar to start.")
+  st.info(
+      "👉 Please upload your contract CSV file via the sidebar to start. Check"
+      " the guidelines in the sidebar for column formatting details."
+  )
 
 # Sidebar Footer
 st.sidebar.markdown("---")
