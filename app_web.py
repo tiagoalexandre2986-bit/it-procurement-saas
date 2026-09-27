@@ -75,10 +75,60 @@ if uploaded_file is not None:
         st.subheader("Contract Lifecycles & Notice Period Analysis")
         st.dataframe(pd.DataFrame(results), use_container_width=True)
 
+        # AI-Powered Strategic Sourcing & Audit Module
+        st.markdown("---")
+        st.subheader("🤖 AI Strategic Sourcing & Risk Audit")
+        st.markdown(
+            "Select a vendor from your portfolio to generate an autonomous"
+            " market benchmark and contract risk analysis."
+        )
+
+        vendor_names = [v["Vendor Name"] for v in results]
+        selected_vendor = st.selectbox(
+            "Select Vendor for AI Audit:", vendor_names
+        )
+
+        if st.button("Run AI Contract & Market Audit"):
+          if not api_key:
+            st.warning(
+                "Please enter your Gemini API Key in the sidebar to run the AI"
+                " audit."
+            )
+          else:
+            with st.spinner(
+                f"Analyzing contract risks and market alternatives for"
+                f" {selected_vendor}..."
+            ):
+              try:
+                # Initialize Gemini client
+                client = genai.Client(api_key=api_key)
+
+                prompt = (
+                    f"Act as an expert IT Procurement Director and Financial"
+                    f" Auditor. Provide a strategic risk and sourcing analysis"
+                    f" for the software/IT vendor: {selected_vendor}. Include"
+                    f" potential hidden traps in standard enterprise contracts"
+                    f" (like automatic roll-over clauses, price inflation"
+                    f" caps), negotiation levers for the upcoming renewal,"
+                    f" and top 2 market alternatives or open-source equivalents"
+                    f" to reduce costs. Keep it structured and professional"
+                    f" in English."
+                )
+
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash", contents=prompt
+                )
+
+                st.markdown("### AI Audit Report")
+                st.write(response.text)
+
+              except Exception as ai_err:
+                st.error(f"Error generating AI audit: {ai_err}")
+
   except Exception as e:
     st.error(f"Error processing file: {e}")
 else:
-    st.info("👉 Please upload your contract CSV file via the sidebar to start.")
+  st.info("👉 Please upload your contract CSV file via the sidebar to start.")
 
 # Sidebar Footer
 st.sidebar.markdown("---")
