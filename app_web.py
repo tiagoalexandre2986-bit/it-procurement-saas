@@ -42,7 +42,7 @@ if uploaded_file is not None:
     st.subheader("Loaded Contracts & Vendor Data")
     st.dataframe(df, use_container_width=True)
 
-    # Process Deadlines and Risks (Kündigungsfrist)
+    # Process Deadlines and Risks (Notice Period)
     if "Renewal Date" in df.columns and "Notice Period Days" in df.columns:
       today = datetime.today()
       results = []
@@ -72,13 +72,13 @@ if uploaded_file is not None:
           continue
 
       if results:
-        st.subheader("Contract Lifecycles & Kündigungsfrist Analysis")
+        st.subheader("Contract Lifecycles & Notice Period Analysis")
         st.dataframe(pd.DataFrame(results), use_container_width=True)
 
   except Exception as e:
     st.error(f"Error processing file: {e}")
 else:
-  st.info("👉 Please upload your contract CSV file via the sidebar to start.")
+    st.info("👉 Please upload your contract CSV file via the sidebar to start.")
 
 # Sidebar Footer
 st.sidebar.markdown("---")
