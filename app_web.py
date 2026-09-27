@@ -51,10 +51,10 @@ uploaded_file = st.sidebar.file_uploader(
 # Main Application Logic
 if uploaded_file is not None:
   try:
-    # Read CSV with semicolon delimiter and clean quotes/spaces
+    # Read CSV with semicolon delimiter and clean quotes/spaces (Corrigido)
     df = pd.read_csv(uploaded_file, sep=";")
     df = df.apply(
-        lambda x: x.str.strip('"'].str.strip() if x.dtype == "object" else x
+        lambda x: x.str.strip('"').str.strip() if x.dtype == "object" else x
     )
 
     st.subheader("Loaded Contracts & Vendor Data")
